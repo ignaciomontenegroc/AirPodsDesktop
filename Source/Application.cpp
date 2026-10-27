@@ -33,6 +33,7 @@
 #include "Gui/Theme.h"
 #include "Core/AirPods.h"
 #include "Core/AutoStart.h"
+#include "Core/BatteryAlert.h"
 #include "Core/Bluetooth.h"
 #include "Core/GlobalMedia.h"
 #include "Core/LowAudioLatency.h"
@@ -274,6 +275,21 @@ void ApdApplication::ConnectAirPodsManager()
     connect(
         manager, &Core::AirPods::Manager::DeviceConnectionChanged, _lowAudioLatencyController.get(),
         &Core::LowAudioLatency::Controller::SetDeviceConnectedSafely);
+    _batteryAlertMonitor = std::make_unique<Core::BatteryAlert::Monitor>();
+    connect(
+        manager, &Core::AirPods::Manager::StateUpdated, mainWindow,
+        [this, mainWindow](const Core::AirPods::State &state) {
+            const auto settings = Core::Settings::GetCurrent();
+            const Core::BatteryAlert::Levels levels{
+                .podsLow = settings.battery_alert_pods_low,
+                .podsCharged = settings.battery_alert_pods_charged,
+                .caseLow = settings.battery_alert_case_low,
+                .caseCharged = settings.battery_alert_case_charged,
+            };
+            if (_batteryAlertMonitor->OnStateUpdated(state, levels)) {
+                emit mainWindow->ShowSafely();
+            }
+        });
     connect(manager, &Core::AirPods::Manager::LidToggled, mainWindow, [mainWindow](bool opened) {
         if (opened) {
             emit mainWindow->ShowSafely();

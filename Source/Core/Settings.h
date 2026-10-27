@@ -90,7 +90,11 @@ void SetRepository(std::unique_ptr<Repository> repository);
         Impl::OnApply(&OnApply_tray_quick_connect_device_id),                                       \
         Impl::Sensitive{})                                                                          \
     callback(TaskbarStatusBehavior, battery_on_taskbar, {TaskbarStatusBehavior::Disable},          \
-        Impl::OnApply(&OnApply_battery_on_taskbar))
+        Impl::OnApply(&OnApply_battery_on_taskbar))                                                \
+    callback(uint32_t, battery_alert_pods_low, {0})                                                \
+    callback(uint32_t, battery_alert_pods_charged, {0})                                            \
+    callback(uint32_t, battery_alert_case_low, {0})                                                \
+    callback(uint32_t, battery_alert_case_charged, {0})
 // clang-format on
 
 struct Fields {

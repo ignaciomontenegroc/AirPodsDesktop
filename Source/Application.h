@@ -35,6 +35,10 @@ namespace Core::LowAudioLatency {
 class Controller;
 }
 
+namespace Core::BatteryAlert {
+class Monitor;
+}
+
 namespace Core::AutoStart {
 class Service;
 }
@@ -92,6 +96,7 @@ private:
     std::unique_ptr<Core::AirPods::Manager> _airPodsManager;
     std::unique_ptr<Core::LowAudioLatency::Controller> _lowAudioLatencyController;
     std::unique_ptr<Core::AutoStart::Service> _autoStartService;
+    std::unique_ptr<Core::BatteryAlert::Monitor> _batteryAlertMonitor;
 
     void InitSettings(Core::Settings::LoadResult loadResult);
     void FirstTimeUse();

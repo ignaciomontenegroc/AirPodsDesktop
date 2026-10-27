@@ -19,11 +19,13 @@
 #pragma once
 
 #include <functional>
+#include <vector>
 
 #include <QLabel>
 #include <QDialog>
 #include <QSlider>
 #include <QCheckBox>
+#include <QPushButton>
 #include <QTimer>
 
 #include "../Core/QuickConnect.h"
@@ -52,12 +54,20 @@ public:
     void SetTabIndex(int index);
 
 private:
+    struct BatteryAlertRow {
+        uint32_t Fields::*field;
+        QLabel *label;
+        std::vector<std::pair<uint32_t, QPushButton *>> chips;
+    };
+
     Ui::SettingsWindow _ui;
     bool _trigger{true};
     int _lastLanguageIndex{0};
     QString _aboutTextTemplate;
     std::function<int()> _getCurrentLocaleIndex;
     Core::QuickConnect::Controller &_quickConnect;
+    QLabel *_lbBatteryAlerts{nullptr}, *_lbDescBatteryAlerts{nullptr};
+    std::vector<BatteryAlertRow> _batteryAlertRows;
 
     void InitCreditsText();
     void RestoreDefaults();
@@ -66,6 +76,9 @@ private:
     void UpdateDescriptions();
     void UpdateStandardButtonTexts();
     void UpdateAdvOverride();
+    void InitBatteryAlerts();
+    void RetranslateBatteryAlerts();
+    void UpdateBatteryAlerts(const Fields &fields);
 
     void showEvent(QShowEvent *event) override;
 
@@ -85,6 +98,7 @@ private:
     void On_cbTrayQuickConnectDevice_currentIndexChanged(int index);
     void On_cbAutoEarDetection_toggled(bool checked);
     void On_hsMaxReceivingRange_valueChanged(int value);
+    void On_batteryAlertChip_toggled(const BatteryAlertRow &row);
 
     // About
     void On_pbOpenLogsDirectory_clicked();
@@ -101,6 +115,7 @@ private:
         _ui.cbTrayQuickConnectEnabled->setAccessibleName(_ui.lbTrayQuickConnect->text());
         _ui.cbAppearanceMode->setAccessibleName(_ui.lbAppearance->text());
         _aboutTextTemplate = _ui.label->text();
+        RetranslateBatteryAlerts();
         InitCreditsText();
         UpdateDescriptions();
         // QDialogButtonBox handles LanguageChange after its parent and resets standard-button

@@ -19,6 +19,10 @@
 #include "SettingsWindow.h"
 
 #include <QAbstractItemView>
+#include <QFrame>
+#include <QGridLayout>
+#include <QHBoxLayout>
+#include <QVBoxLayout>
 #include <QPainter>
 #include <QLabel>
 #include <QListWidget>
@@ -33,6 +37,7 @@
 
 #include <Config.h>
 
+#include "../Core/BatteryAlert.h"
 #include "../Core/Debug.h"
 
 using namespace std::chrono_literals;
@@ -175,6 +180,8 @@ SettingsWindow::SettingsWindow(
     connect(&_quickConnect, &Core::QuickConnect::Controller::DevicesChanged, this, [this] {
         UpdateQuickConnectDevices(GetCurrent());
     });
+
+    InitBatteryAlerts();
 
     Update(GetCurrent(), false);
 
@@ -437,7 +444,125 @@ void SettingsWindow::Update(const Fields &fields, bool trigger)
 
     UpdateQuickConnectDevices(fields);
 
+    UpdateBatteryAlerts(fields);
+
     _trigger = true;
+}
+
+void SettingsWindow::InitBatteryAlerts()
+{
+    using namespace Core::BatteryAlert;
+
+    auto *card = new QFrame{_ui.features};
+    card->setObjectName("cardBatteryAlerts");
+    card->setFrameShape(QFrame::NoFrame);
+    card->setProperty("cssClass", "settingCard");
+
+    auto *cardLayout = new QVBoxLayout{card};
+    cardLayout->setSpacing(4);
+    cardLayout->setContentsMargins(16, 12, 16, 12);
+
+    _lbBatteryAlerts = new QLabel{card};
+    _lbBatteryAlerts->setProperty("cssClass", "cardTitle");
+    cardLayout->addWidget(_lbBatteryAlerts);
+
+    _lbDescBatteryAlerts = new QLabel{card};
+    _lbDescBatteryAlerts->setWordWrap(true);
+    _lbDescBatteryAlerts->setProperty("cssClass", "cardDescription");
+    cardLayout->addWidget(_lbDescBatteryAlerts);
+
+    auto *grid = new QGridLayout;
+    grid->setContentsMargins(0, 8, 0, 0);
+    grid->setHorizontalSpacing(12);
+    grid->setVerticalSpacing(6);
+    grid->setColumnStretch(1, 1);
+    cardLayout->addLayout(grid);
+
+    struct RowSpec {
+        uint32_t Fields::*field;
+        uint32_t firstLevel, lastLevel;
+    };
+    // A low alert at 100% would fire immediately, and a charge alert at 10% can only follow a
+    // completely drained battery, so each direction offers the nine levels that make sense.
+    const RowSpec rowSpecs[] = {
+        {&Fields::battery_alert_pods_low, kMinLevel, kMaxLowLevel},
+        {&Fields::battery_alert_pods_charged, kMinLevel + kLevelStep, kMaxChargedLevel},
+        {&Fields::battery_alert_case_low, kMinLevel, kMaxLowLevel},
+        {&Fields::battery_alert_case_charged, kMinLevel + kLevelStep, kMaxChargedLevel},
+    };
+
+    for (const auto &spec : rowSpecs) {
+        const auto rowIndex = _batteryAlertRows.size();
+        auto &row =
+            _batteryAlertRows.emplace_back(BatteryAlertRow{spec.field, new QLabel{card}, {}});
+        grid->addWidget(row.label, static_cast<int>(rowIndex), 0);
+
+        auto *chipsLayout = new QHBoxLayout;
+        chipsLayout->setSpacing(4);
+        for (auto level = spec.firstLevel; level <= spec.lastLevel; level += kLevelStep) {
+            auto *chip = new QPushButton{QString{"%1%"}.arg(level), card};
+            chip->setCheckable(true);
+            chip->setAutoDefault(false);
+            chip->setProperty("cssClass", "levelChip");
+            chipsLayout->addWidget(chip);
+            row.chips.emplace_back(level, chip);
+
+            connect(chip, &QPushButton::toggled, this, [this, rowIndex](bool) {
+                if (_trigger) {
+                    On_batteryAlertChip_toggled(_batteryAlertRows.at(rowIndex));
+                }
+            });
+        }
+        chipsLayout->addStretch();
+        grid->addLayout(chipsLayout, static_cast<int>(rowIndex), 1);
+    }
+
+    // Insert above the trailing spacer that keeps the cards top-aligned.
+    const auto spacerIndex = _ui.featuresLayout->count() - 1;
+    APD_ASSERT(_ui.featuresLayout->itemAt(spacerIndex)->spacerItem() != nullptr);
+    _ui.featuresLayout->insertWidget(spacerIndex, card);
+
+    RetranslateBatteryAlerts();
+}
+
+void SettingsWindow::RetranslateBatteryAlerts()
+{
+    _lbBatteryAlerts->setText(tr("Battery alerts"));
+    _lbDescBatteryAlerts->setText(
+        tr("Shows the AirPods window when the battery reaches a selected level. AirPods report "
+           "battery in 10% steps, and the case only reports it while its lid is open or an "
+           "earbud is inside."));
+
+    const QString rowTexts[] = {
+        tr("Earbuds drop to"),
+        tr("Earbuds charge to"),
+        tr("Case drops to"),
+        tr("Case charges to"),
+    };
+    APD_ASSERT(std::size(rowTexts) == _batteryAlertRows.size());
+
+    for (size_t i = 0; i < _batteryAlertRows.size(); ++i) {
+        const auto &row = _batteryAlertRows[i];
+        row.label->setText(rowTexts[i]);
+        for (const auto &[level, chip] : row.chips) {
+            chip->setAccessibleName(QString{"%1 %2%"}.arg(rowTexts[i]).arg(level));
+        }
+    }
+}
+
+void SettingsWindow::UpdateBatteryAlerts(const Fields &fields)
+{
+    const auto previousTrigger = _trigger;
+    _trigger = false;
+
+    for (const auto &row : _batteryAlertRows) {
+        const auto mask = fields.*row.field;
+        for (const auto &[level, chip] : row.chips) {
+            chip->setChecked(Core::BatteryAlert::HasLevel(mask, level));
+        }
+    }
+
+    _trigger = previousTrigger;
 }
 
 void SettingsWindow::UpdateQuickConnectDevices(const Fields &fields)
@@ -581,6 +706,19 @@ void SettingsWindow::On_cbAutoEarDetection_toggled(bool checked)
 void SettingsWindow::On_hsMaxReceivingRange_valueChanged(int value)
 {
     ModifiableAccess()->rssi_min = -value;
+}
+
+void SettingsWindow::On_batteryAlertChip_toggled(const BatteryAlertRow &row)
+{
+    Core::BatteryAlert::LevelMask mask{0};
+    for (const auto &[level, chip] : row.chips) {
+        if (chip->isChecked()) {
+            mask |= Core::BatteryAlert::LevelBit(level);
+        }
+    }
+
+    auto settings = ModifiableAccess();
+    settings.operator->()->*row.field = mask;
 }
 
 void SettingsWindow::On_pbOpenLogsDirectory_clicked()

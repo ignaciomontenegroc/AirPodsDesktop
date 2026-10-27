@@ -9,6 +9,7 @@
 
 #include <Config.h>
 #include "Source/Core/AirPods.h"
+#include "Source/Core/BatteryAlert.h"
 #include "Source/Core/Settings.h"
 #include "Source/Core/SettingsRepository.h"
 #include "Source/Core/Update.h"
@@ -180,7 +181,47 @@ private Q_SLOTS:
     void PresentsMainWindowCaseBattery();
     void MapsMainWindowAnimationResources();
     void ConvertsTaskbarGeometryAcrossDpiBoundaries();
+    void FiresLowBatteryAlertOncePerLevel();
+    void RearmsLowBatteryAlertAfterCharging();
+    void FiresChargeAlertOnlyWhenCrossing();
+    void TracksEarbudsAndCaseSeparately();
 };
+
+namespace {
+
+struct BatteryReading {
+    std::optional<uint32_t> value;
+    bool charging{false};
+};
+
+Core::AirPods::State
+MakeBatteryState(BatteryReading left, BatteryReading right, BatteryReading caseBox = {})
+{
+    Core::AirPods::State state;
+    state.model = Core::AirPods::Model::AirPods_Pro_2;
+    const auto apply = [](Core::AirPods::Details::BasicState &target,
+                          const BatteryReading &reading) {
+        if (reading.value.has_value()) {
+            target.battery = reading.value.value();
+        }
+        target.isCharging = reading.charging;
+    };
+    apply(state.pods.left, left);
+    apply(state.pods.right, right);
+    apply(state.caseBox, caseBox);
+    return state;
+}
+
+Core::BatteryAlert::LevelMask LevelMaskOf(std::initializer_list<uint32_t> percents)
+{
+    Core::BatteryAlert::LevelMask mask{0};
+    for (const auto percent : percents) {
+        mask |= Core::BatteryAlert::LevelBit(percent);
+    }
+    return mask;
+}
+
+} // namespace
 
 void AirPodsDomainTests::RejectsMalformedPackets()
 {
@@ -771,6 +812,85 @@ void AirPodsDomainTests::ConvertsTaskbarGeometryAcrossDpiBoundaries()
         Gui::TaskbarGeometry::CalculateLayout(QSize{50, 1440}, QRect{0, 120, 50, 1270}, 120, false);
     QCOMPARE(vertical.statusLogical, QRect(0, 1112, 40, 40));
     QCOMPARE(vertical.taskButtonsNative, QRect(0, 120, 50, 1270));
+}
+
+void AirPodsDomainTests::FiresLowBatteryAlertOncePerLevel()
+{
+    const Core::BatteryAlert::Levels levels{.podsLow = LevelMaskOf({20})};
+    Core::BatteryAlert::Monitor monitor;
+
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({40}, {50}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({30}, {50}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({20}, {50}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({20}, {50}), levels));
+
+    // A reading that flickers by one step must not raise the same alert again.
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({30}, {50}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({20}, {50}), levels));
+
+    // 10% is not selected.
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({10}, {50}), levels));
+
+    // The first reading already below a selected level alerts, e.g. when connecting at 10%.
+    Core::BatteryAlert::Monitor fresh;
+    QVERIFY(fresh.OnStateUpdated(MakeBatteryState({10}, {10}), levels));
+    QVERIFY(!fresh.OnStateUpdated(MakeBatteryState({10}, {10}), levels));
+}
+
+void AirPodsDomainTests::RearmsLowBatteryAlertAfterCharging()
+{
+    const Core::BatteryAlert::Levels levels{.podsLow = LevelMaskOf({30, 20})};
+    Core::BatteryAlert::Monitor monitor;
+
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({30}, {40}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({20}, {40}), levels));
+
+    // Back in the case for a while, then out again.
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({40, true}, {50, true}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({40}, {50}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({30}, {50}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({20}, {50}), levels));
+}
+
+void AirPodsDomainTests::FiresChargeAlertOnlyWhenCrossing()
+{
+    const Core::BatteryAlert::Levels levels{.podsCharged = LevelMaskOf({80})};
+
+    // Already above the level when first seen: nothing to report.
+    Core::BatteryAlert::Monitor alreadyCharged;
+    QVERIFY(!alreadyCharged.OnStateUpdated(MakeBatteryState({90, true}, {90, true}), levels));
+
+    Core::BatteryAlert::Monitor monitor;
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({60, true}, {70, true}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({80, true}, {70, true}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({80, true}, {80, true}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({90, true}, {90, true}), levels));
+
+    // A one-step dip does not re-arm the level; a real discharge does.
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({70, true}, {80, true}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({80, true}, {80, true}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({60}, {60}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({60, true}, {60, true}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({80, true}, {80, true}), levels));
+}
+
+void AirPodsDomainTests::TracksEarbudsAndCaseSeparately()
+{
+    const Core::BatteryAlert::Levels levels{
+        .podsLow = LevelMaskOf({20}),
+        .caseLow = LevelMaskOf({30}),
+        .caseCharged = LevelMaskOf({100})};
+    Core::BatteryAlert::Monitor monitor;
+
+    // The charging earbud is ignored for the low alert; the one in use is not.
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({10, true}, {50}, {60}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({10, true}, {20}, {60}), levels));
+
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({20, true}, {20}, {30}), levels));
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({}, {}, {}), levels));
+
+    QVERIFY(!monitor.OnStateUpdated(MakeBatteryState({}, {}, {90, true}), levels));
+    QVERIFY(monitor.OnStateUpdated(MakeBatteryState({}, {}, {100, true}), levels));
 }
 
 QTEST_GUILESS_MAIN(AirPodsDomainTests)

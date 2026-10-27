@@ -573,6 +573,17 @@ QPushButton:default:pressed, QPushButton[cssClass="accent"]:pressed {
 QPushButton:default:disabled, QPushButton[cssClass="accent"]:disabled {
     background: @accentDisabled; border-color: @accentDisabled; color: @textDisabled;
 }
+QPushButton[cssClass="levelChip"] {
+    min-height: 24px;
+    padding: 0 7px;
+    border-radius: 12px;
+}
+QPushButton[cssClass="levelChip"]:checked {
+    background: @accent; color: @accentText; border-color: @accent;
+}
+QPushButton[cssClass="levelChip"]:checked:hover {
+    background: @accentHover; border-color: @accentHover;
+}
 
 /* ---------- Check box ---------- */
 QCheckBox { spacing: 8px; }
