@@ -26,6 +26,10 @@ if (POLICY CMP0177)
     cmake_policy(SET CMP0177 NEW)
 endif()
 
+# Shown to users. `PROJECT_NAME` stays the internal identifier: it keys the settings registry
+# path, the auto-start entry, the install directory, and the executable and update asset names.
+set(APD_DISPLAY_NAME "AirPods for Windows")
+
 set(APD_GITHUB_OWNER "SpriteOvO" CACHE STRING "GitHub repository owner used by the updater.")
 set(
     APD_GITHUB_REPOSITORY
@@ -633,10 +637,16 @@ if (APD_GENERATE_INSTALLER)
     set(CPACK_PACKAGE_VERSION_PATCH ${AirPodsDesktop_VERSION_PATCH})
     set(CPACK_PACKAGE_INSTALL_DIRECTORY ${PROJECT_NAME})
     set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-    set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME}" ${PROJECT_NAME})
+    set(CPACK_PACKAGE_EXECUTABLES "${PROJECT_NAME}" "${APD_DISPLAY_NAME}")
+    set(CPACK_NSIS_PACKAGE_NAME "${APD_DISPLAY_NAME}")
+    set(CPACK_NSIS_DISPLAY_NAME "${APD_DISPLAY_NAME}")
+    # Names the installer file, e.g. "AirPods for Windows v1.2.3 -win64.exe". The updater matches
+    # assets by their -win64 suffix. CPACK_SYSTEM_NAME is only set by include(CPack) below, and the
+    # build is x64-only, so the suffix is spelled out.
+    set(CPACK_PACKAGE_FILE_NAME "${APD_DISPLAY_NAME} v${PROJECT_VERSION} -win64")
 
     set(ICON_FILEPATH "${CMAKE_CURRENT_SOURCE_DIR}/Source/Resource/Image/Icon.ico")
-    set(SHORTCUT_NAME "AirPods Desktop")
+    set(SHORTCUT_NAME "${APD_DISPLAY_NAME}")
 
     if (MSVC)
         set(CPACK_GENERATOR NSIS)
@@ -646,7 +656,7 @@ if (APD_GENERATE_INSTALLER)
         set(CPACK_NSIS_URL_INFO_ABOUT ${CMAKE_PROJECT_HOMEPAGE_URL})
         set(CPACK_NSIS_EXECUTABLES_DIRECTORY "./")
         set(CPACK_NSIS_MUI_FINISHPAGE_RUN "./${PROJECT_NAME}.exe")
-        set(CPACK_NSIS_BRANDING_TEXT "${PROJECT_NAME} installer")
+        set(CPACK_NSIS_BRANDING_TEXT "${APD_DISPLAY_NAME} installer")
         configure_file(
             "${CMAKE_CURRENT_SOURCE_DIR}/CMake/InstallerMigration.nsh.in"
             "${CMAKE_CURRENT_BINARY_DIR}/InstallerMigration.nsh"

@@ -26,6 +26,7 @@ namespace Config {
 #define CONFIG_WINRC_VERSION_NUMBERS    @AirPodsDesktop_VERSION_MAJOR@, @AirPodsDesktop_VERSION_MINOR@, @AirPodsDesktop_VERSION_PATCH@, 0
 #define CONFIG_WINRC_VERSION_STRING     CONFIG_VERSION_STRING ".0"
 #define CONFIG_PROGRAM_NAME             "@PROJECT_NAME@"
+#define CONFIG_DISPLAY_NAME             "@APD_DISPLAY_NAME@"
 #define CONFIG_DESCRIPTION              "@PROJECT_DESCRIPTION@"
 #define CONFIG_COPYRIGHT                "Copyright © 2021-2022 SpriteOvO. All rights reserved."
 #define CONFIG_CPACK_SYSTEM_NAME        "@CPACK_SYSTEM_NAME@"
@@ -41,6 +42,7 @@ namespace Config {
 #define CONFIG_URL_CURRENT_RELEASE      CONFIG_URL_RELEASES "/tag/" CONFIG_RELEASE_TAG_PREFIX CONFIG_VERSION_STRING
 
 constexpr inline auto ProgramName = CONFIG_PROGRAM_NAME;
+constexpr inline auto DisplayName = CONFIG_DISPLAY_NAME;
 constexpr inline auto UrlRepository = CONFIG_URL_REPO;
 constexpr inline auto ApiRepository = CONFIG_API_REPO;
 constexpr inline auto UrlIssues = CONFIG_URL_ISSUES;

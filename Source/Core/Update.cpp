@@ -187,7 +187,7 @@ std::optional<ReleaseInfo> ParseSingleReleaseResponse(const std::string &text)
 #if !defined APD_OS_WIN
     #error "Need to port."
 #endif
-            // AirPodsDesktop-x.x.x-win64.exe
+            // AirPods for Windows vx.x.x -win64.exe
             //
             if (!IsCompatibleInstallerAsset(fileName, CONFIG_CPACK_SYSTEM_NAME)) {
                 LOG(Warn, "ParseSRResponse: Asset platform is mismatched. Continue.");

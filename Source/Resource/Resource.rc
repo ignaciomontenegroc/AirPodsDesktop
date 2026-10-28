@@ -79,12 +79,12 @@ BEGIN
         BLOCK "080004b0"
         BEGIN
             VALUE "CompanyName", "SpriteOvO"
-            VALUE "FileDescription", CONFIG_DESCRIPTION
+            VALUE "FileDescription", CONFIG_DISPLAY_NAME
             VALUE "FileVersion", CONFIG_WINRC_VERSION_STRING
             VALUE "InternalName", CONFIG_PROGRAM_NAME ".exe"
             VALUE "LegalCopyright", CONFIG_COPYRIGHT
             VALUE "OriginalFilename", CONFIG_PROGRAM_NAME ".exe"
-            VALUE "ProductName", CONFIG_PROGRAM_NAME
+            VALUE "ProductName", CONFIG_DISPLAY_NAME
             VALUE "ProductVersion", CONFIG_WINRC_VERSION_STRING
         END
     END

@@ -812,7 +812,7 @@
    <item>
     <widget class="QLabel" name="hint">
      <property name="text">
-      <string>If the download is slow, you can download the update manually. AirPodsDesktop will close when you switch to manual download.</string>
+      <string>If the download is slow, you can download the update manually. AirPods for Windows will close when you switch to manual download.</string>
      </property>
      <property name="textFormat">
       <enum>Qt::PlainText</enum>

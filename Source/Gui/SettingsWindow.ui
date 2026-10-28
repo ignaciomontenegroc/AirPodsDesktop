@@ -17,7 +17,7 @@
    </size>
   </property>
   <property name="windowTitle">
-   <string>AirPodsDesktop Settings</string>
+   <string>AirPods for Windows Settings</string>
   </property>
   <layout class="QHBoxLayout" name="rootLayout" stretch="0,1">
    <property name="spacing">
@@ -1186,7 +1186,7 @@
                 <item alignment="Qt::AlignBottom">
                  <widget class="QLabel" name="label_3">
                   <property name="text">
-                   <string notr="true">AirPodsDesktop</string>
+                   <string notr="true">AirPods for Windows</string>
                   </property>
                   <property name="cssClass" stdset="0">
                    <string notr="true">appTitle</string>

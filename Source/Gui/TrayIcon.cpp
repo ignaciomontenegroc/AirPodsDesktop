@@ -190,7 +190,7 @@ void TrayIcon::Repaint()
         toolTipContent += '\n' + _actionNewVersion->text();
     }
 
-    const auto toolTip = "AirPodsDesktop\n" + toolTipContent.trimmed();
+    const auto toolTip = QString{Config::DisplayName} + "\n" + toolTipContent.trimmed();
     _tray->setToolTip(toolTip);
     emit ToolTipChanged(toolTip);
 

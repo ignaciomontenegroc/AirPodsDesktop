@@ -68,7 +68,7 @@ void Initialize()
     // So far, there seems to be no better way than using native APIs.
     //
 
-    auto title = std::format("{} fatal error", Config::ProgramName);
+    auto title = std::format("{} fatal error", Config::DisplayName);
 
     if (report) {
         auto message = std::format(

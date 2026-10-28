@@ -82,7 +82,7 @@ void ApdApplication::InitSettings(Core::Settings::LoadResult loadResult)
     switch (result) {
     case Core::Settings::LoadResult::AbiIncompatible:
         QMessageBox::information(
-            nullptr, Config::ProgramName,
+            nullptr, Config::DisplayName,
             tr("Settings format has changed a bit and needs to be reconfigured."));
         [[fallthrough]];
 
@@ -105,12 +105,12 @@ void ApdApplication::FirstTimeUse()
     const auto &constMetaFields = Core::Settings::GetConstMetaFields();
 
     QMessageBox::information(
-        nullptr, Config::ProgramName,
+        nullptr, Config::DisplayName,
         tr("Hello, welcome to %1!\n"
            "\n"
            "This seems to be your first time using this program.\n"
            "Let's configure something together.")
-            .arg(Config::ProgramName));
+            .arg(Config::DisplayName));
 
     auto current = Core::Settings::GetCurrent();
 
@@ -118,7 +118,7 @@ void ApdApplication::FirstTimeUse()
     //
     current.auto_run =
         QMessageBox::question(
-            nullptr, Config::ProgramName,
+            nullptr, Config::DisplayName,
             tr("Do you want this program to launch when the system starts?\n"
                "\n"
                "If you frequently use AirPods with this computer, it is recommended that you click "
@@ -129,7 +129,7 @@ void ApdApplication::FirstTimeUse()
     //
     current.low_audio_latency =
         QMessageBox::question(
-            nullptr, Config::ProgramName,
+            nullptr, Config::DisplayName,
             tr("Do you want to enable the \"low audio latency\" feature?\n"
                "\n%1")
                 .arg(constMetaFields.low_audio_latency.Description()),
@@ -138,7 +138,7 @@ void ApdApplication::FirstTimeUse()
     Core::Settings::Save(std::move(current));
 
     QMessageBox::information(
-        nullptr, Config::ProgramName,
+        nullptr, Config::DisplayName,
         tr("Great! Everything is ready!\n"
            "\n"
            "Enjoy it all."));

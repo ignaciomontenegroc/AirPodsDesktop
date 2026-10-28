@@ -27,6 +27,8 @@
 #include <QTextCursor>
 #include <QTextBlockFormat>
 
+#include <Config.h>
+
 #include "Theme.h"
 #include "Utils.h"
 
@@ -180,7 +182,8 @@ void UpdateWindow::UpdateText()
         prompt   ? _ui.promptHeader
         : failed ? _ui.failedHeader
                  : _ui.downloadHeader);
-    _ui.promptTitle->setText(QStringLiteral("AirPodsDesktop %1").arg(_info.version.toString()));
+    _ui.promptTitle->setText(
+        QStringLiteral("%1 %2").arg(Config::DisplayName).arg(_info.version.toString()));
     _ui.rowSubtitle->setText(
         tr("Ready to install. You are using %1.").arg(Core::Update::GetLocalVersion().toString()));
     _ui.downloadTitle->setText(tr("Downloading update"));
@@ -197,7 +200,8 @@ void UpdateWindow::UpdateText()
     _ui.failureRow->setVisible(failed);
     _ui.failureDescription->setText(
         tr("The automatic update could not be completed. Please download and install the new "
-           "version manually, or close this window to continue using AirPodsDesktop."));
+           "version manually, or close this window to continue using %1.")
+            .arg(Config::DisplayName));
     _ui.footerRow->setVisible(!downloading);
     _ui.footerDivider->setVisible(!downloading);
     _ui.skipButton->setVisible(prompt);

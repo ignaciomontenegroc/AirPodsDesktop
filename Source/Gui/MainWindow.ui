@@ -11,7 +11,7 @@
    </rect>
   </property>
   <property name="windowTitle">
-   <string>AirPodsDesktop information</string>
+   <string>AirPods for Windows</string>
   </property>
   <widget class="QLabel" name="deviceLabel">
    <property name="geometry">

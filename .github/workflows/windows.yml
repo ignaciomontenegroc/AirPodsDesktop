@@ -106,14 +106,14 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           $installer = Get-ChildItem `
-            Build/Release/Installer/AirPodsDesktop-*-win64.exe |
+            'Build/Release/Installer/AirPods for Windows v*-win64.exe' |
             Select-Object -First 1
           if (-not $installer) {
             throw 'The NSIS installer was not generated.'
           }
 
           $portableSource =
-            "Build/Release/Installer/_CPack_Packages/win64/NSIS/AirPodsDesktop-$env:VERSION-win64/AirPodsDesktop"
+            "Build/Release/Installer/_CPack_Packages/win64/NSIS/AirPods for Windows v$env:VERSION -win64/AirPodsDesktop"
           if (-not (Test-Path -LiteralPath $portableSource)) {
             throw "Portable package directory not found: $portableSource"
           }
@@ -158,8 +158,8 @@ jobs:
           }
 
           New-Item -ItemType Directory -Path dist | Out-Null
-          $installerDestination = "dist/AirPodsDesktop-$env:VERSION-win64.exe"
-          $portableDestination = "dist/AirPodsDesktop-$env:VERSION-win64-portable.zip"
+          $installerDestination = "dist/AirPods-for-Windows-$env:VERSION-win64.exe"
+          $portableDestination = "dist/AirPods-for-Windows-$env:VERSION-win64-portable.zip"
           Copy-Item -LiteralPath $installer.FullName -Destination $installerDestination
           Compress-Archive -Path "$portableSource/*" -DestinationPath $portableDestination
 
@@ -195,7 +195,7 @@ jobs:
               throw 'signtool.exe was not found on the runner.'
             }
 
-            $installer = Get-ChildItem dist/AirPodsDesktop-*-win64.exe | Select-Object -First 1
+            $installer = Get-ChildItem dist/AirPods-for-Windows-*-win64.exe | Select-Object -First 1
             & $signTool.FullName sign `
               /fd SHA256 `
               /td SHA256 `
@@ -221,8 +221,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          $source = "dist/AirPodsDesktop-$env:VERSION-win64.exe"
-          $bridge = "dist/AirPodsDesktop-$env:VERSION-win32-bridge.exe"
+          $source = "dist/AirPods-for-Windows-$env:VERSION-win64.exe"
+          $bridge = "dist/AirPods-for-Windows-$env:VERSION-win32-bridge.exe"
           if (-not (Test-Path -LiteralPath $source)) {
             throw "Signed x64 installer not found: $source"
           }
@@ -243,7 +243,7 @@ jobs:
           if (-not $signTool) {
             throw 'signtool.exe was not found on the runner.'
           }
-          Get-ChildItem dist/AirPodsDesktop-*.exe | ForEach-Object {
+          Get-ChildItem dist/AirPods-for-Windows-*.exe | ForEach-Object {
             & $signTool.FullName verify /pa /v $_.FullName
             if ($LASTEXITCODE -ne 0) {
               throw "Authenticode verification failed for $($_.Name)."
@@ -253,7 +253,7 @@ jobs:
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
-          name: AirPodsDesktop-${{ steps.version.outputs.version }}-${{ github.sha }}
+          name: AirPods-for-Windows-${{ steps.version.outputs.version }}-${{ github.sha }}
           path: dist/*
           if-no-files-found: error
           retention-days: 30
@@ -269,7 +269,7 @@ jobs:
       - name: Download release assets
         uses: actions/download-artifact@v5
         with:
-          name: AirPodsDesktop-${{ needs.build.outputs.version }}-${{ github.sha }}
+          name: AirPods-for-Windows-${{ needs.build.outputs.version }}-${{ github.sha }}
           path: dist
 
       - name: Create draft GitHub Release
@@ -277,9 +277,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: >-
           gh release create "${{ github.ref_name }}"
-          "dist/AirPodsDesktop-${{ needs.build.outputs.version }}-win64.exe"
-          "dist/AirPodsDesktop-${{ needs.build.outputs.version }}-win64-portable.zip"
-          "dist/AirPodsDesktop-${{ needs.build.outputs.version }}-win32-bridge.exe"
+          "dist/AirPods-for-Windows-${{ needs.build.outputs.version }}-win64.exe"
+          "dist/AirPods-for-Windows-${{ needs.build.outputs.version }}-win64-portable.zip"
+          "dist/AirPods-for-Windows-${{ needs.build.outputs.version }}-win32-bridge.exe"
           --repo "${{ github.repository }}"
           --draft
           --verify-tag
