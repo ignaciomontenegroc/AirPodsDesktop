@@ -5,6 +5,81 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `AGENTS.md` holds the contributor-facing conventions (coding style, commit/PR guidelines). This file
 adds the architecture and workflow detail that only emerges from reading across several files.
 
+## This Fork: AirPods for Windows
+
+This checkout is a personal fork of `SpriteOvO/AirPodsDesktop`, shipped under the name
+**AirPods for Windows**. The sections below this one describe the upstream codebase and still apply.
+
+### Remotes
+
+| Remote | URL | Use |
+|---|---|---|
+| `origin` | `ignaciomontenegroc/AirPodsDesktop` | The fork. Work on `main` and push here. |
+| `upstream` | `SpriteOvO/AirPodsDesktop` | Fetch only (push is disabled). Pull upstream fixes with `git fetch upstream` then `git merge upstream/main`. |
+
+### Display name vs. internal name
+
+`APD_DISPLAY_NAME` in `CMakeLists.txt` ("AirPods for Windows") is what users see: window titles, tray
+tooltip, dialogs, exe version info, installer, Start menu, desktop shortcut and installed-apps entry.
+Use `Config::DisplayName` for any new user-facing text.
+
+`PROJECT_NAME` / `Config::ProgramName` (`AirPodsDesktop`) is the internal identifier and must not be
+renamed: it keys the settings registry path (`HKCU\Software\AirPodsDesktop\AirPodsDesktop`), the
+auto-start `Run` value, the single-instance lock, the install directory
+(`C:\Program Files\AirPodsDesktop`) and the executable name. Renaming it would wipe the user's
+settings and break auto-start and in-place upgrades.
+
+The installer file is `AirPods for Windows vX.Y.Z -win64.exe`. The updater recognizes installer assets
+only by the `-win64` ending (`IsCompatibleInstallerAsset`), so keep that suffix.
+
+### Fork features
+
+- **Icon:** `Source/Resource/Image/Icon.svg` is Apple's official AirPods Pro 2 pair symbol in white,
+  padded to a square viewBox because `QSvgRenderer` stretches non-square art. `Icon.ico` is generated
+  from a 1024 px render of the same SVG; regenerate both together.
+- **Battery alerts:** `Core::BatteryAlert` (`Source/Core/BatteryAlert.*`) shows the main window when
+  the earbuds or case drain or charge to a chosen level. Levels are 10% bitmasks in the
+  `battery_alert_*` settings, edited in Settings > Features > Battery alerts, wired in
+  `ApdApplication::ConnectAirPodsManager()`, and covered by `AirPodsDomainTests`.
+- **Updater:** builds check the fork's releases. The fork has none, so a 404 from
+  `FetchLatestRelease` in the log is expected.
+
+### Local development
+
+Machine-specific configuration lives in `CMakeUserPresets.json` (gitignored). It defines a `local`
+preset: Visual Studio 17 2022 x64, build directory `C:/dev/afw-build`, vcpkg toolchain at
+`C:/dev/vcpkg`, Qt at `C:/Qt/6.8.3/msvc2022_64`, tests and installer on, and `APD_GITHUB_OWNER` set
+to the fork. Test presets: `local` (windowless suites) and `local-ui` (everything).
+
+Use `Tools/Dev.ps1`:
+
+```powershell
+pwsh Tools/Dev.ps1 build      # configure if needed, then build app, tests and installer
+pwsh Tools/Dev.ps1 test       # windowless tests only
+pwsh Tools/Dev.ps1 install    # build, back up settings, install over the current copy, relaunch
+pwsh Tools/Dev.ps1 run        # start the installed app
+```
+
+- Do not build with `--parallel`: compiling the embedded resources (`qrc_Resource`) alongside other
+  targets runs the compiler out of heap space.
+- **Never run the UI test suites without asking the user first.** `UiRenderingTests`, the
+  `*RenderingScale*` tests and `AnimationViewTests` open real app windows on screen, some in
+  Traditional Chinese, which once alarmed the user. `pwsh Tools/Dev.ps1 test` excludes them.
+- Installing needs an administrator (UAC) prompt and backs up settings to
+  `%APPDATA%\AirPodsDesktop\SettingsBackups` first.
+
+### Known issue
+
+If the app starts while the AirPods are disconnected, `BluetoothDevice::FromIdAsync` fails with "The
+device is not ready for use", `Manager::CompleteBoundDeviceLookup` treats that as the device being
+gone, and the binding (`device_address`) is reset to 0. The user then has to pick the AirPods again
+in the main window. This is upstream behavior and not yet fixed in the fork.
+
+### Commits
+
+Use the `[TAG] Title` plus bullet-body convention from the user's global instructions, not the
+upstream `feat:` prefixes described in `AGENTS.md`.
+
 ## Build & Test
 
 Windows-only, **64-bit (x64)** build with Qt 6.8.3 and Visual Studio 2022. For prerequisites, configuration, build commands, and test

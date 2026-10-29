@@ -1,5 +1,17 @@
 # Repository Guidelines
 
+## This Fork
+
+This checkout is the **AirPods for Windows** fork of `SpriteOvO/AirPodsDesktop`. Read the
+"This Fork: AirPods for Windows" section of `CLAUDE.md` before changing anything. In short:
+
+- Push to `origin` (the fork); `upstream` is fetch-only.
+- User-facing text uses `Config::DisplayName`; never rename the internal `AirPodsDesktop` identifier.
+- Build, test and install with `pwsh Tools/Dev.ps1 build|test|install`, using the gitignored
+  `CMakeUserPresets.json` for local paths. Do not build with `--parallel`.
+- Never run the UI test suites (they open windows on screen) without asking the user first.
+- Commit with the `[TAG] Title` plus bullets convention, not the `feat:` prefixes mentioned below.
+
 ## Project Structure & Module Organization
 
 AirPodsDesktop is a Windows-focused C++20 and Qt 6 application built with CMake. Application startup and shared utilities live directly under `Source/`. Platform-independent behavior is grouped in `Source/Core/`, while Windows implementations use the `_win.cpp` suffix. Qt windows, widgets, and `.ui` forms belong in `Source/Gui/`. Images, audio, videos, translations, and Qt/Windows resource manifests are under `Source/Resource/`. Keep CMake helpers in `CMake/`, build documentation in `Docs/`, and screenshots or promotional assets in `Assets/`. Generated output belongs in `Build/` and must not be committed.

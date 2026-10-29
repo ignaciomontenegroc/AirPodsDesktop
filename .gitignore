@@ -29,3 +29,6 @@ Docs/ReleaseNotes/0.6.0.md
 Docs/Performance.md
 
 build_release.ps1
+
+# Machine-specific CMake presets (local Qt and vcpkg paths)
+CMakeUserPresets.json
